@@ -4,16 +4,22 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"time"
+	"sync"
 )
 
 func main() {
+	var wg sync.WaitGroup
+
 	for i := 1; i < 1024; i++ {
+		wg.Add(1)
+
 		go func(portNumber int) {
-			fmt.Println(portNumber)
+			defer wg.Done()
+
 			if portNumber == 25 {
 				return
 			}
+
 			dest := "scanme.nmap.org:" + strconv.Itoa(portNumber)
 			conn, err := net.Dial("tcp", dest)
 
@@ -21,10 +27,10 @@ func main() {
 				return
 			}
 
-			fmt.Printf("~> got conn for %v\n", dest)
 			conn.Close()
+			fmt.Printf("~> got conn for %v\n", dest)
 		}(i)
 	}
-	time.Sleep(7 * time.Second)
+	wg.Wait()
 	fmt.Println("done!")
 }
