@@ -4,22 +4,27 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"time"
 )
 
 func main() {
 	for i := 1; i < 1024; i++ {
-		if i == 25 {
-			continue
-		}
-		dest := "scanme.nmap.org:" + strconv.Itoa(i)
-		conn, err := net.Dial("tcp", dest)
+		go func(portNumber int) {
+			fmt.Println(portNumber)
+			if portNumber == 25 {
+				return
+			}
+			dest := "scanme.nmap.org:" + strconv.Itoa(portNumber)
+			conn, err := net.Dial("tcp", dest)
 
-		if err != nil {
-			continue
-		}
+			if err != nil {
+				return
+			}
 
-		fmt.Printf("~> got conn for %v\n", dest)
-		conn.Close()
+			fmt.Printf("~> got conn for %v\n", dest)
+			conn.Close()
+		}(i)
 	}
+	time.Sleep(7 * time.Second)
 	fmt.Println("done!")
 }
