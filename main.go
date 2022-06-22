@@ -4,41 +4,49 @@ import (
 	"fmt"
 	"net"
 	"strconv"
-	"sync"
 )
 
 func main() {
-	var wg sync.WaitGroup
+	var openPorts []int
 	portsChan := make(chan int, 10)
+	resultsChan := make(chan int)
 
 	for i := 0; i < cap(portsChan); i++ {
-		go worker(portsChan, &wg)
+		go worker(portsChan, resultsChan)
 	}
 
-	for i := 1; i <= 24; i++ {
-		wg.Add(1)
-		portsChan <- i
+	go func() {
+		for i := 1; i <= 24; i++ {
+			portsChan <- i
+		}
+	}()
+
+	for i := 0; i < 24; i++ {
+		p := <-resultsChan
+		if p != 0 {
+			openPorts = append(openPorts, p)
+		}
 	}
 
 	close(portsChan)
-	wg.Wait()
+	close(resultsChan)
 
-	fmt.Println("done!")
+	for _, v := range openPorts {
+		fmt.Printf("%d open\n", v)
+	}
 }
 
-func worker(ports chan int, wg *sync.WaitGroup) {
+func worker(ports chan int, result chan int) {
 	for p := range ports {
 		dest := "scanme.nmap.org:" + strconv.Itoa(p)
 		conn, err := net.Dial("tcp", dest)
 
-		if conn != nil {
-			fmt.Printf("~> got conn for %v\n", dest)
-			conn.Close()
-		}
 		if err != nil {
-			fmt.Printf("~> error for %v\n", dest)
+			result <- 0
+			continue
 		}
 
-		wg.Done()
+		result <- p
+		conn.Close()
 	}
 }
